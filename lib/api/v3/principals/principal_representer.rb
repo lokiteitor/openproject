@@ -39,6 +39,19 @@ module API
         include API::Decorators::DateProperty
         include ::API::Caching::CachedRepresenter
 
+        def self.create(model, *args)
+          case model.type
+          when 'User'
+            ::API::V3::Users::UserRepresenter.new(model, *args)
+          when 'Group'
+            ::API::V3::Groups::GroupRepresenter.new(model, *args)
+          when 'PlaceholderUser'
+            ::API::V3::PlaceholderUsers::PlaceholderUserRepresenter.new(model, *args)
+          else
+            raise ArgumentError, "Missing concrete principal representer for #{model}"
+          end
+        end
+
         self_link
 
         link :memberships,

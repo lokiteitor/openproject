@@ -54,13 +54,13 @@ module API
         }.freeze
 
         NAMESPACE_MAP = {
-          'user' => 'users',
+          'user' => ['users', 'groups', 'placeholder_users'],
           'version' => 'versions',
           'list' => 'custom_options'
         }.freeze
 
         REPRESENTER_MAP = {
-          'user' => '::API::V3::Users::UserRepresenter',
+          'user' => '::API::V3::Principals::PrincipalRepresenter',
           'version' => '::API::V3::Versions::VersionRepresenter',
           'list' => '::API::V3::CustomOptions::CustomOptionRepresenter'
         }.freeze
@@ -244,7 +244,7 @@ module API
         end
 
         def embedded_link_value_getter(custom_field)
-          klass = representer_class(custom_field)
+          representer_class = derive_representer_class(custom_field)
 
           proc do
             # Do not embed list or multi values as their links contain all the
@@ -257,8 +257,8 @@ module API
 
             next unless value
 
-            klass
-              .new(value, current_user: current_user)
+            representer_class
+              .create(value, current_user: current_user)
           end
         end
 
@@ -345,7 +345,7 @@ module API
           end
         end
 
-        def representer_class(custom_field)
+        def derive_representer_class(custom_field)
           REPRESENTER_MAP[custom_field.field_format]
             .constantize
         end
@@ -361,9 +361,10 @@ module API
         end
 
         def allowed_users_static_filters
-          [{ status: { operator: '!',
+          [
+            { status: { operator: '!',
                        values: [Principal.statuses[:locked].to_s] } },
-           { type: { operator: '=', values: ['User'] } }]
+          ]
         end
 
         module RepresenterClass
